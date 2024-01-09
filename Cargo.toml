@@ -1,0 +1,14 @@
+[package]
+name = "mlx-training-rs"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+tokio = { version = "1", features = ["full"] }
+async-openai = "0.18.0"
+serde = "1.0"
+serde_json = "1.0"
+qdrant-client = "1.7.0"
+rust-bert = { version = "0.21.0", features = ["download-libtorch"] }
