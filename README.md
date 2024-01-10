@@ -2,7 +2,7 @@
 
 A CLI to generate __synthetic__ data for MLX traning. The CLI is largely translated from the php version [here](https://apeatling.com/articles/simple-guide-to-local-llm-fine-tuning-on-a-mac-with-mlx/?utm_source=pocket_reader).
 
-## Fine-Tuning LLM for Dummy on Apple Silicon
+## QLoRa Fine-Tuning LLM for Dummy on Apple Silicon
 
 Based on [this](https://apeatling.com/articles/simple-guide-to-local-llm-fine-tuning-on-a-mac-with-mlx/?utm_source=pocket_reader), [this](https://www.reddit.com/r/LocalLLaMA/comments/191s7x3/a_simple_guide_to_local_llm_finetuning_on_a_mac/?share_id=hH4Vu8gxZgwYRvl_fIyOu&utm_content=1&utm_medium=ios_app&utm_name=ioscss&utm_source=share&utm_term=1), [this](https://www.reddit.com/r/LocalLLaMA/comments/18ujt0n/using_gpus_on_a_mac_m2_max_via_mlx_update_on/) and [this](https://www.reddit.com/r/LocalLLaMA/comments/18wabkc/lessons_learned_so_far_lora_fine_tuning_on/).
 
@@ -25,20 +25,42 @@ Clone MLX
 git clone https://github.com/ml-explore/mlx-examples.git
 ```
 
+Download and fine-tune [Mistral-7B-Instruct-v0.2](https://huggingface.co/mistralai/Mistral-7B-Instruct-v0.2).
 
+We are adding `-q` for coverting into a 4-bit quantized MLX model to `./Mistral-7B-Instruct-v0.2-mlx-4bit`
 ```sh
-python convert.py --hf-path mistralai/Mistral-7B-Instruct-v0.2 -q --mlx-path ./Mistral-7B-Instruct-v0.2-mlx-4bit 
+cd mlx-examples/llm/hf-lllm
+pip install -r requirements.txt # or pip3
+python convert.py --hf-path mistralai/Mistral-7B-Instruct-v0.2 -q --mlx-path ./Mistral-7B-Instruct-v0.2-mlx-4bit
 ```
 
-## Get started
+It will tale some time...
 
+### Prepare Training Data
+
+We have model in MLX. Now preparing data for the fine-tuning.
+
+The examples are in `mlx-examples/lora/data`, you can delete everything inside.
+
+#### Generate Training Data
+
+Install `mlxt`
+```sh
+brew install chenhunghan/homebrew-formulae/mlx-training-rs
+```
+
+Generate
 ```sh
 export OPENAI_API_KEY=[you key]
-mlxt --topic="Fine Tuning MLX"
+mlxt --topic="[the topic you are interested]"
 ```
 
-will generate traning data for MLX, by a topic you are interested in using __knowledge distillation__(not really) by talking to GPT.
+#### Start Fine Tuning
+
+```sh
+cd mlx-examples/lora
+pip install -r requirements.txt # or pip3
+python lora.py --train --model ../llms/hf_llm/Mistral-7B-Instruct-v0.2-mlx-4bit --data ./data --batch-size 1 --lora-layers 4
 ```
-train.jsonl
-valid.jsonl
-```
+
+That's all!

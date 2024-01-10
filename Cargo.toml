@@ -1,6 +1,6 @@
 [package]
 name = "mlx-training-rs"
-version = "0.2.1"
+version = "0.2.2"
 edition = "2021"
 repository = "https://github.com/chenhunghan/mlx-training-rs"
 
@@ -17,8 +17,6 @@ clap = { version = "4.4.11", features = ["derive", "wrap_help"] }
 async-openai = "0.18.0"
 serde = "1.0"
 serde_json = "1.0"
-qdrant-client = "1.7.0"
-rust-bert = { version = "0.21.0", features = ["download-libtorch"] }
 
 # The profile that 'cargo dist' will build with
 [profile.dist]
