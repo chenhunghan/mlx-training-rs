@@ -1,6 +1,6 @@
 [package]
 name = "mlx-training-rs"
-version = "0.2.0"
+version = "0.2.1"
 edition = "2021"
 repository = "https://github.com/chenhunghan/mlx-training-rs"
 
@@ -36,7 +36,7 @@ installers = ["shell", "homebrew"]
 # A GitHub repo to push Homebrew formulas to
 tap = "chenhunghan/homebrew-formulae"
 # Target platforms to build apps for (Rust target-triple syntax)
-targets = ["x86_64-unknown-linux-gnu", "aarch64-apple-darwin", "x86_64-apple-darwin", "x86_64-pc-windows-msvc"]
+targets = ["aarch64-apple-darwin", "x86_64-apple-darwin"]
 # Publish jobs to run in CI
 publish-jobs = ["homebrew"]
 # Publish jobs to run in CI
