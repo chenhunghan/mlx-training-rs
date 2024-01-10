@@ -20,8 +20,9 @@ async fn main_async() -> Result<(), Box<dyn Error>> {
     // Parse command line arguments
     let cli = CLI::parse();
     let topic = &cli.topic;
+    let n = cli.n;
     
-    write_instruction_jsonl(topic).await?;
+    write_instruction_jsonl(topic, n).await?;
     write_train_jsonl().await?;
     create_valid_file().await?;
 
@@ -41,7 +42,7 @@ struct Train {
 }
 
 // generate a write all instructions to instructions.jsonl
-async fn write_instruction_jsonl(topic: &str) -> Result<(), Box<dyn Error>> {
+async fn write_instruction_jsonl(topic: &str, n: usize) -> Result<(), Box<dyn Error>> {
     let file_path = PathBuf::from("./data/").join("instructions.jsonl");
     if !file_path.exists() {
         println!("Creating instructions.jsonl file...");
@@ -54,7 +55,6 @@ async fn write_instruction_jsonl(topic: &str) -> Result<(), Box<dyn Error>> {
     let instructions = fs::read_to_string(&file_path).await?;
     let instructions: Vec<Instruction> = instructions.lines().map(|line| serde_json::from_str(&line).unwrap()).collect();
 
-    let n = 100;
     println!("------------------------------");
     println!("{}", format!("Generating instructions on topic {}...", topic));
     for _ in 0..n {
