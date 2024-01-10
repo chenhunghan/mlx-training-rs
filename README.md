@@ -1,6 +1,16 @@
 # mlx-training-rs
 
-A CLI to generate __synthetic__ data for MLX traning. The CLI is largely translated from the php version [here](https://apeatling.com/articles/simple-guide-to-local-llm-fine-tuning-on-a-mac-with-mlx/?utm_source=pocket_reader).
+<p align="center">
+  <img src="./assets/logo.jpeg" width="320" height="320" alt="mlxt logo" />
+</p>
+
+A CLI to generate __synthetic__ data for MLX fine-tuning. The CLI is largely translated from the php version [here](https://apeatling.com/articles/simple-guide-to-local-llm-fine-tuning-on-a-mac-with-mlx/?utm_source=pocket_reader).
+
+## Demo
+
+<p align="center">
+  <img src="./assets/demo.gif" width="900" alt="Demo of mlxt" />
+</p>
 
 ## QLoRa fine-tuning for dummies on Apple Silicon
 
