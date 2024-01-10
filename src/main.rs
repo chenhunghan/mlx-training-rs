@@ -22,23 +22,26 @@ fn main() {
 
 async fn main_async() -> Result<(), Box<dyn Error>> {
     let topic = "Kubernetes";
-    let embedding_model = SentenceEmbeddingsBuilder::remote(
-        rust_bert::pipelines::sentence_embeddings::SentenceEmbeddingsModelType::AllMiniLmL12V2,
-    ).create_model()?;
-    let qdrant_client = QdrantClient::from_url(&std::env::var("QDRANT_URL")?)
-        .with_api_key(std::env::var("QDRANT_API_KEY"))
-    .build()?;
-    rag_chuck_generate().await?;
-    rag_chuck_insert(&embedding_model, &qdrant_client, topic, true).await?;
-    let query = "How do I install Kubernetes on my Mac?";
-    let result = rag_query(query, topic, &embedding_model, &qdrant_client).await?;
-    println!("{}", result);
     
     write_instruction_jsonl(topic).await?;
     write_train_jsonl().await?;
     create_valid_file().await?;
 
     println!("Done! Training and validation JSONL files created.");
+
+    if std::env::var("QDRANT_URL").is_ok() {
+        let embedding_model = SentenceEmbeddingsBuilder::remote(
+            rust_bert::pipelines::sentence_embeddings::SentenceEmbeddingsModelType::AllMiniLmL12V2,
+        ).create_model()?;
+        let qdrant_client = QdrantClient::from_url(&std::env::var("QDRANT_URL")?)
+            .with_api_key(std::env::var("QDRANT_API_KEY"))
+        .build()?;
+        rag_chuck_generate().await?;
+        rag_chuck_insert(&embedding_model, &qdrant_client, topic, true).await?;
+        let query = "How do I install Kubernetes on my Mac?";
+        let result = rag_query(query, topic, &embedding_model, &qdrant_client).await?;
+        println!("{}", result);
+    }
 
     Ok(())
 }
