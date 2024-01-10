@@ -3,10 +3,16 @@ name = "mlx-training-rs"
 version = "0.1.0"
 edition = "2021"
 
+[[bin]]
+# https://github.com/rust-lang/cargo/pull/9627/files#diff-e35cef716988e9f7122a9c90479aa9204e61d1f41b094c0d183a44e0ca271eaa
+name = "mlxt"
+path = "src/main.rs"
+
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
 tokio = { version = "1", features = ["full"] }
+clap = { version = "4.4.11", features = ["derive", "wrap_help"] }
 async-openai = "0.18.0"
 serde = "1.0"
 serde_json = "1.0"

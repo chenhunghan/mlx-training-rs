@@ -1,7 +1,10 @@
 use std::error::Error;
 use std::collections::HashMap;
+use std::path::PathBuf;
 
 use async_openai::types::CreateCompletionRequestArgs;
+use clap::Parser;
+use mlx_training_rs::cli::CLI;
 use serde::Deserialize;
 use tokio::fs::{self, OpenOptions};
 use tokio::io::AsyncWriteExt;
@@ -14,14 +17,15 @@ use qdrant_client::{
 };
 use rust_bert::pipelines::sentence_embeddings::{SentenceEmbeddingsBuilder, SentenceEmbeddingsModel};
 
-
 fn main() {
     let rt = Runtime::new().unwrap();
     rt.block_on(main_async()).unwrap();
 }
 
 async fn main_async() -> Result<(), Box<dyn Error>> {
-    let topic = "Kubernetes";
+    // Parse command line arguments
+    let cli = CLI::parse();
+    let topic = &cli.topic;
     
     write_instruction_jsonl(topic).await?;
     write_train_jsonl().await?;
@@ -63,11 +67,16 @@ struct RagChuck {
 
 // generate a write all instructions to instructions.jsonl
 async fn write_instruction_jsonl(topic: &str) -> Result<(), Box<dyn Error>> {
-    if !std::path::Path::new("instructions.jsonl").exists() {
-        eprintln!("No instructions.jsonl file found!");
-        std::process::exit(1);
+    let file_path = PathBuf::from("./data/").join("instructions.jsonl");
+    if !file_path.exists() {
+        println!("Creating instructions.jsonl file...");
+        let _ = OpenOptions::new()
+            .create(true)
+            .append(true)
+            .open(&file_path)
+            .await?;
     }
-    let instructions = fs::read_to_string("instructions.jsonl").await?;
+    let instructions = fs::read_to_string(&file_path).await?;
     let instructions: Vec<Instruction> = instructions.lines().map(|line| serde_json::from_str(&line).unwrap()).collect();
 
     let n = 100;
@@ -84,7 +93,7 @@ async fn write_instruction_jsonl(topic: &str) -> Result<(), Box<dyn Error>> {
             let mut file = OpenOptions::new()
             .create(true)
             .append(true)
-            .open("instructions.jsonl")
+            .open(&file_path)
             .await?;
 
             println!("------------------------------");
@@ -117,11 +126,13 @@ async fn gen_instructions(topic: &str) -> Result<String, Box<dyn Error>> {
 
 // get all intructions from instructions.jsonl and write answer of the intructions to train.jsonl
 async fn write_train_jsonl() -> Result<(), Box<dyn Error>> {
-    let instructions = fs::read_to_string("instructions.jsonl").await?;
+    let instructions_file_path = PathBuf::from("./data/").join("instructions.jsonl");
+    let instructions = fs::read_to_string(&instructions_file_path).await?;
     let instructions: Vec<Instruction> = instructions.lines().map(|line| serde_json::from_str(&line).unwrap()).collect();
     let total = instructions.len();
 
-    let trainings: Vec<Train> = fs::read_to_string("train.jsonl").await?.lines().filter_map(|line| serde_json::from_str(&line).ok()).collect();
+    let train_file_path = PathBuf::from("./data/").join("train.jsonl");
+    let trainings: Vec<Train> = fs::read_to_string(&train_file_path).await?.lines().filter_map(|line| serde_json::from_str(&line).ok()).collect();
     print!("{} data found in train.jsonl. ", trainings.len());
 
     for (i, instruction) in instructions.iter().enumerate() {
@@ -138,7 +149,7 @@ async fn write_train_jsonl() -> Result<(), Box<dyn Error>> {
             let mut file = OpenOptions::new()
                 .create(true)
                 .append(true)
-                .open("train.jsonl")
+                .open(&train_file_path)
                 .await?;
 
             // Write the result to the end of the file
@@ -183,12 +194,26 @@ async fn process_instruction(instruction: &str) -> Result<String, Box<dyn Error>
 }
 
 async fn create_valid_file() -> Result<(), Box<dyn std::error::Error>> {
-    if !std::path::Path::new("train.jsonl").exists() {
-        eprintln!("No train.jsonl file found!");
-        std::process::exit(1);
+    let train_file_path = PathBuf::from("./data/").join("train.jsonl");
+    if !train_file_path.exists() {
+        println!("Creating train.jsonl file...");
+        let _ = OpenOptions::new()
+            .create(true)
+            .append(true)
+            .open(&train_file_path)
+            .await?;
+    }
+    let valid_file_path = PathBuf::from("./data/").join("valid.jsonl");
+    if !valid_file_path.exists() {
+        println!("Creating valid.jsonl file...");
+        let _ = OpenOptions::new()
+            .create(true)
+            .append(true)
+            .open(&valid_file_path)
+            .await?;
     }
 
-    let train = fs::read_to_string("train.jsonl").await?;
+    let train = fs::read_to_string(&train_file_path).await?;
     let train_lines: Vec<&str> = train.lines().collect();
     let total_lines = train_lines.len();
     let twenty_percent = (total_lines as f64 * 0.2).round() as usize;
@@ -199,8 +224,8 @@ async fn create_valid_file() -> Result<(), Box<dyn std::error::Error>> {
     let train = train_lines.join("\n");
     let val = val_lines.join("\n");
 
-    fs::write("train.jsonl", train).await?;
-    fs::write("valid.jsonl", val).await?;
+    fs::write(&train_file_path, train).await?;
+    fs::write(&valid_file_path, val).await?;
 
     Ok(())
 }
@@ -208,7 +233,17 @@ async fn create_valid_file() -> Result<(), Box<dyn std::error::Error>> {
 async fn rag_chuck_generate() -> Result<(), Box<dyn std::error::Error>> {
     let n = 5;
 
-    let rag_jsonl = fs::read_to_string("rag.jsonl").await?;
+    let rag_file_path = PathBuf::from("./data/").join("rag.jsonl");
+    if !rag_file_path.exists() {
+        println!("Creating rag.jsonl file...");
+        let _ = OpenOptions::new()
+            .create(true)
+            .append(true)
+            .open(&rag_file_path)
+            .await?;
+    }
+
+    let rag_jsonl = fs::read_to_string(&rag_file_path).await?;
     let rag_chucks: Vec<RagChuck> = rag_jsonl.lines().map(|line| serde_json::from_str(&line).unwrap()).collect();
     let topic = "Lens Desktop";
 
@@ -223,7 +258,7 @@ async fn rag_chuck_generate() -> Result<(), Box<dyn std::error::Error>> {
             let mut file = OpenOptions::new()
             .create(true)
             .append(true)
-            .open("rag.jsonl")
+            .open(&rag_file_path)
             .await?;
 
             println!("------------------------------");
@@ -244,10 +279,15 @@ async fn rag_chuck_insert(
     qdrant_client: &QdrantClient,
     collection_name: &str,
     nuke_collection_before_insert: bool,
-) -> Result<(), Box<dyn std::error::Error>> {    
-    if !std::path::Path::new("rag.jsonl").exists() {
-        eprintln!("No rag.jsonl file found! Did you generate the rag.jsonl file?");
-        std::process::exit(1);
+) -> Result<(), Box<dyn std::error::Error>> {
+    let rag_file_path = PathBuf::from("./data/").join("rag.jsonl");
+    if !rag_file_path.exists() {
+        println!("Creating rag.jsonl file...");
+        let _ = OpenOptions::new()
+            .create(true)
+            .append(true)
+            .open(&rag_file_path)
+            .await?;
     }
 
     if nuke_collection_before_insert {
@@ -269,7 +309,7 @@ async fn rag_chuck_insert(
             .await?;
     }
     
-    let rag_jsonl = fs::read_to_string("rag.jsonl").await?;
+    let rag_jsonl = fs::read_to_string(&rag_file_path).await?;
     let rag_chucks: Vec<RagChuck> = rag_jsonl.lines().filter_map(|line| serde_json::from_str(&line).ok()).collect();
     let mut chuck_embedding_id = 0;
     let points = rag_chucks.iter().filter_map(|chuck| {
