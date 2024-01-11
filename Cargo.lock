@@ -725,7 +725,7 @@ dependencies = [
 
 [[package]]
 name = "mlx-training-rs"
-version = "0.2.4"
+version = "0.2.5"
 dependencies = [
  "async-openai",
  "clap",
