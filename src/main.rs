@@ -15,9 +15,25 @@ use serde::Deserialize;
 use serde_json;
 use tokio::fs::{self, OpenOptions};
 use tokio::io::AsyncWriteExt;
+use tracing_subscriber::fmt::format::FmtSpan;
+use tracing::{info,debug};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
+    let subscriber = tracing_subscriber::fmt();
+    let format = tracing_subscriber::fmt::format().compact();
+    match tracing::subscriber::set_global_default(
+        subscriber
+            .event_format(format)
+            .with_span_events(FmtSpan::ENTER | FmtSpan::CLOSE)
+            .finish(),
+    ) {
+        Ok(_) => (),
+        Err(error) => panic!(
+            "error setting default tracer as `fmt` subscriber {:?}",
+            error
+        ),
+    };
     // Parse command line arguments
     let cli = CLI::parse();
     let topic = &cli.topic;
@@ -28,7 +44,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     write_train_jsonl().await?;
     create_valid_file().await?;
 
-    println!("Done! Training and validation JSONL files created.");
+    info!("Done! Training and validation JSONL files created.");
 
     Ok(())
 }
@@ -47,7 +63,7 @@ struct Train {
 async fn write_instruction_jsonl(topic: &str, n: usize) -> Result<(), Box<dyn Error>> {
     let file_path = PathBuf::from("./data/").join("instructions.jsonl");
     if !file_path.exists() {
-        println!("Creating instructions.jsonl file...");
+        info!("Creating instructions.jsonl file...");
         let _ = OpenOptions::new()
             .create(true)
             .append(true)
@@ -58,8 +74,8 @@ async fn write_instruction_jsonl(topic: &str, n: usize) -> Result<(), Box<dyn Er
     // Open the file in append mode
     let mut file = OpenOptions::new().append(true).open(&file_path).await?;
 
-    println!("------------------------------");
-    println!(
+    info!("------------------------------");
+    info!(
         "{}",
         format!("Generating instructions on topic {}...", topic)
     );
@@ -71,11 +87,11 @@ async fn write_instruction_jsonl(topic: &str, n: usize) -> Result<(), Box<dyn Er
             .map(|line| serde_json::from_str(&line).unwrap())
             .collect();
         if let Some(_) = instructions.iter().find(|i| i.text.contains(&instruction)) {
-            // println!("Skipping duplicate instruction: {}", instruction);
+            debug!("Skipping duplicate instruction: {}", instruction);
             continue;
         } else {
-            println!("------------------------------");
-            println!("Writing new instruction to file: {}", instruction);
+            info!("------------------------------");
+            info!("Writing new instruction to file: {}", instruction);
             // Write the { text: instruction } to the end of the file
             file.write_all(format!(r#"{{ "text": "{}" }}"#, instruction).as_bytes())
                 .await?;
@@ -124,7 +140,7 @@ async fn write_train_jsonl() -> Result<(), Box<dyn Error>> {
 
     let train_file_path = PathBuf::from("./data/").join("train.jsonl");
     if !train_file_path.exists() {
-        println!("Creating train.jsonl file...");
+        info!("Creating train.jsonl file...");
         let _ = OpenOptions::new()
             .create(true)
             .append(true)
@@ -142,13 +158,13 @@ async fn write_train_jsonl() -> Result<(), Box<dyn Error>> {
             .iter()
             .find(|t| t.text.contains(&instruction.text))
         {
-            // println!("Skipping processing instruction {} because it can be found in train.jsonl", instruction.text);
+            // info!("Skipping processing instruction {} because it can be found in train.jsonl", instruction.text);
             continue;
         } else {
-            println!("({}/{}) {}", i + 1, total, instruction.text);
-            println!("------------------------------");
+            info!("({}/{}) {}", i + 1, total, instruction.text);
+            info!("------------------------------");
             let result = process_instruction(&instruction.text).await?;
-            println!("\n------------------------------");
+            info!("\n------------------------------");
 
             // Open the file in append mode
             let mut file = OpenOptions::new()
@@ -188,14 +204,14 @@ async fn query_openai(user_message: &str) -> Result<String, Box<dyn Error>> {
 
 async fn process_instruction(instruction: &str) -> Result<String, Box<dyn Error>> {
     let answer = query_openai(instruction).await.unwrap();
-    println!("before {}", answer);
+    info!("before {}", answer);
     let answer = answer
         .replace('\n', "\\n")
         .replace("\n\n", "\\n\\n")
         .replace('\r', "\\r")
         .replace(r#"/""#, r#"\""#)
         .replace('"', r#"\""#);
-    println!("after {}", answer);
+    info!("after {}", answer);
 
     let result = format!(
         r#"{{ "text": "<s>[INST] {}[/INST] {}</s>" }}"#,
@@ -208,7 +224,7 @@ async fn process_instruction(instruction: &str) -> Result<String, Box<dyn Error>
 async fn create_valid_file() -> Result<(), Box<dyn std::error::Error>> {
     let train_file_path = PathBuf::from("./data/").join("train.jsonl");
     if !train_file_path.exists() {
-        println!("Creating train.jsonl file...");
+        info!("Creating train.jsonl file...");
         let _ = OpenOptions::new()
             .create(true)
             .append(true)
@@ -217,7 +233,7 @@ async fn create_valid_file() -> Result<(), Box<dyn std::error::Error>> {
     }
     let valid_file_path = PathBuf::from("./data/").join("valid.jsonl");
     if !valid_file_path.exists() {
-        println!("Creating valid.jsonl file...");
+        info!("Creating valid.jsonl file...");
         let _ = OpenOptions::new()
             .create(true)
             .append(true)
